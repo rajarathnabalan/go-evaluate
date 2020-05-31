@@ -1,4 +1,4 @@
-package main
+package evaluate
 
 import (
 	"fmt"
@@ -6,7 +6,12 @@ import (
 )
 
 func main() {
-
+	fmt.Println(Evaluate("true && true", func(v string) (bool, error) {
+		if v == "true" {
+			return true, nil
+		}
+		return false, nil
+	}, nil))
 }
 
 // Evaluate :
