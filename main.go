@@ -11,6 +11,15 @@ func main() {
 
 // Evaluate :
 func Evaluate(v string, check func(string) (bool, error), validateOperand func(string) error) (bool, error) {
+
+	fail := func(err error) (bool, error) {
+		return false, err
+	}
+
+	if check == nil {
+		return fail(fmt.Errorf("check func cannot be nil"))
+	}
+
 	v = strings.ReplaceAll(v, " ", "")
 	length := len(v)
 	index := 0
@@ -43,7 +52,7 @@ func Evaluate(v string, check func(string) (bool, error), validateOperand func(s
 				index++
 				tmpResult, err = evaluate()
 				if err != nil {
-					return false, err
+					return fail(err)
 				}
 			} else {
 				endIndex := findIndex(index, "()&|")
@@ -54,11 +63,11 @@ func Evaluate(v string, check func(string) (bool, error), validateOperand func(s
 					return b
 				}
 				if v[min(endIndex, length-1)] == '(' {
-					return false, fmt.Errorf("syntax error: invalid expression")
+					return fail(fmt.Errorf("syntax error: invalid expression"))
 				}
 				tmpResult, err = check(v[index:endIndex])
 				if err != nil {
-					return false, err
+					return fail(err)
 				}
 				index = endIndex
 			}
@@ -79,7 +88,7 @@ func Evaluate(v string, check func(string) (bool, error), validateOperand func(s
 		NextOperator:
 			if index < length && v[index] == ')' {
 				if len(parenthesesStack) == 0 {
-					return false, fmt.Errorf("syntax error: invalid expression")
+					return fail(fmt.Errorf("syntax error: invalid expression"))
 				}
 				parenthesesStack = parenthesesStack[:len(parenthesesStack)-1]
 				index++
@@ -97,9 +106,11 @@ func Evaluate(v string, check func(string) (bool, error), validateOperand func(s
 						if index < length {
 							if v[index] != '(' {
 								endIndex := findIndex(index, ")&|")
-								err := validateOperand(v[index:endIndex])
-								if err != nil {
-									return err
+								if validateOperand != nil {
+									err := validateOperand(v[index:endIndex])
+									if err != nil {
+										return err
+									}
 								}
 								index = endIndex
 							} else {
@@ -131,36 +142,36 @@ func Evaluate(v string, check func(string) (bool, error), validateOperand func(s
 				if v[index] == '&' {
 					err := validateOperator('&')
 					if err != nil {
-						return false, err
+						return fail(err)
 					}
 				} else if v[index] == '|' {
 					err := validateOperator('|')
 					if err != nil {
-						return false, err
+						return fail(err)
 					}
 				} else {
-					return false, fmt.Errorf("syntax error: invalid operator '%c'", v[index])
+					return fail(fmt.Errorf("syntax error: invalid operator '%c'", v[index]))
 				}
 				if operation == 'n' {
 					goto NextOperator
 				}
 			} else if index < length {
-				return false, fmt.Errorf("syntax error: invalid expression")
+				return fail(fmt.Errorf("syntax error: invalid expression"))
 			}
 		}
 
 		if operation != byte('n') {
-			return false, fmt.Errorf("invalid end of expression")
+			return fail(fmt.Errorf("invalid end of expression"))
 		}
 		return result, nil
 	}
 	result, err := evaluate()
 	if err != nil {
-		return false, err
+		return fail(err)
 	}
 
 	if len(parenthesesStack) != 0 {
-		return false, fmt.Errorf("invalid end of expression")
+		return fail(fmt.Errorf("invalid end of expression"))
 	}
 	return result, nil
 }
